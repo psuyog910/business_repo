@@ -33,32 +33,15 @@ def extract_document_links(markdown):
                 current_section = doc_type
                 continue
 
-    if current_section and "http" in line:
-        match = re.search(r'https?://[^\s)]+\.pdf', line)
-        if match:
-            doc_types[current_section]["links"].append(match.group())
+        if current_section and "http" in line:
+            match = re.search(r'https?://[^\s)]+\.pdf', line)
+            if match:
+                doc_types[current_section]["links"].append(match.group())
 
     return {key: value["links"] for key, value in doc_types.items()}
 
-# Add this import at the top with other imports
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-
 def download_pdfs(document_data, stock_symbol):
     """Downloads PDFs for transcripts, annual reports, and PPTs into a zip file."""
-    # Configure retry strategy
-    retry_strategy = Retry(
-        total=3,  # number of retries
-        backoff_factor=1,  # wait 1, 2, 4 seconds between retries
-        status_forcelist=[500, 502, 503, 504, 429]  # HTTP status codes to retry on
-    )
-    
-    # Create session with retry strategy
-    session = requests.Session()
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
-
     pdf_folder = "downloaded_documents"
     os.makedirs(pdf_folder, exist_ok=True)
 
@@ -84,30 +67,19 @@ def download_pdfs(document_data, stock_symbol):
             }
 
             try:
-                response = session.get(
-                    url, 
-                    headers=headers, 
-                    stream=True, 
-                    timeout=30  # increased timeout to 30 seconds
-                )
+                response = requests.get(url, headers=headers, stream=True, timeout=50)
                 if response.status_code == 200:
                     with open(filename, "wb") as file:
-                        for chunk in response.iter_content(chunk_size=8192):
-                            if chunk:
-                                file.write(chunk)
+                        file.write(response.content)
                     pdf_files.append(filename)
                     downloaded_count += 1
                     progress_bar.progress(downloaded_count / total_files)
                 else:
-                    st.error(f"Failed to download {url} (Status: {response.status_code})")
-            except requests.exceptions.Timeout:
-                st.error(f"Timeout while downloading {url}. The server is taking too long to respond.")
-            except requests.exceptions.ConnectionError:
-                st.error(f"Connection error while downloading {url}. Please check your internet connection.")
+                    st.error(f"Failed to download {url}")
             except Exception as e:
-                st.error(f"Error downloading {url}: {str(e)}")
+                st.error(f"Error downloading {url}: {e}")
 
-            time.sleep(1)  # Increased delay between requests
+            time.sleep(0.5)
 
     if pdf_files:
         zip_filename = f"{stock_symbol}_documents.zip"
