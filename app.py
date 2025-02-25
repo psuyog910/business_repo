@@ -71,24 +71,33 @@ if st.button("🔍 Search"):
                 if st.button("📥 Download All PDFs"):
                     pdf_folder = "downloaded_pdfs"
                     os.makedirs(pdf_folder, exist_ok=True)
-                    
                     zip_filename = f"{stock_symbol.lower()}_transcripts.zip"
+                    zip_path = os.path.join(pdf_folder, zip_filename)
                     
-                    with zipfile.ZipFile(zip_filename, "w") as zipf:
-                        for i, (url, title, date) in enumerate(transcript_data):
-                            pdf_filename = os.path.join(pdf_folder, f"transcript_{i+1}.pdf")
-                            headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://nseindia.com/"}
-                            
-                            try:
-                                response = requests.get(url, headers=headers, stream=True, timeout=15)
-                                if response.status_code == 200:
-                                    with open(pdf_filename, "wb") as f:
-                                        f.write(response.content)
-                                    zipf.write(pdf_filename, os.path.basename(pdf_filename))
-                            except Exception:
-                                continue
+                    downloaded_files = []
+                    for i, (url, title, date) in enumerate(transcript_data):
+                        pdf_filename = os.path.join(pdf_folder, f"transcript_{i+1}.pdf")
+                        headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://nseindia.com/"}
+                        
+                        try:
+                            response = requests.get(url, headers=headers, stream=True, timeout=15)
+                            if response.status_code == 200:
+                                with open(pdf_filename, "wb") as f:
+                                    f.write(response.content)
+                                downloaded_files.append(pdf_filename)
+                            else:
+                                st.warning(f"⚠️ Failed to download: {url}")
+                        except Exception as e:
+                            st.warning(f"⚠️ Error downloading {url}: {str(e)}")
                     
-                    with open(zip_filename, "rb") as file:
-                        st.download_button(label="📦 Download ZIP File", data=file, file_name=zip_filename, mime="application/zip")
+                    if downloaded_files:
+                        with zipfile.ZipFile(zip_path, "w") as zipf:
+                            for file in downloaded_files:
+                                zipf.write(file, os.path.basename(file))
+                        
+                        with open(zip_path, "rb") as file:
+                            st.download_button(label="📦 Download ZIP File", data=file, file_name=zip_filename, mime="application/zip")
+                    else:
+                        st.error("❌ No PDFs were downloaded.")
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
