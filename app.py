@@ -77,7 +77,9 @@ if st.button("🔍 Search"):
                             headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://nseindia.com/"}
                             
                             try:
+                                st.write(f"🛠️ Downloading: {url}")  # Debug output
                                 response = requests.get(url, headers=headers, stream=True, timeout=15)
+                                st.write(f"ℹ️ Response Code: {response.status_code}")  # Debug response code
                                 if response.status_code == 200:
                                     pdf_filename = f"transcript_{i+1}.pdf"
                                     zipf.writestr(pdf_filename, response.content)
