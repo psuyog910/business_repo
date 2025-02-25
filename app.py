@@ -5,6 +5,7 @@ import requests
 import zipfile
 import pandas as pd
 import streamlit as st
+import io
 from firecrawl import FirecrawlApp
 
 # Set up Streamlit UI
@@ -69,35 +70,23 @@ if st.button("🔍 Search"):
                 st.dataframe(df[['Title', 'Date', 'URL']])
                 
                 if st.button("📥 Download All PDFs"):
-                    pdf_folder = "downloaded_pdfs"
-                    os.makedirs(pdf_folder, exist_ok=True)
-                    zip_filename = f"{stock_symbol.lower()}_transcripts.zip"
-                    zip_path = os.path.join(pdf_folder, zip_filename)
+                    zip_buffer = io.BytesIO()
                     
-                    downloaded_files = []
-                    for i, (url, title, date) in enumerate(transcript_data):
-                        pdf_filename = os.path.join(pdf_folder, f"transcript_{i+1}.pdf")
-                        headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://nseindia.com/"}
-                        
-                        try:
-                            response = requests.get(url, headers=headers, stream=True, timeout=15)
-                            if response.status_code == 200:
-                                with open(pdf_filename, "wb") as f:
-                                    f.write(response.content)
-                                downloaded_files.append(pdf_filename)
-                            else:
-                                st.warning(f"⚠️ Failed to download: {url}")
-                        except Exception as e:
-                            st.warning(f"⚠️ Error downloading {url}: {str(e)}")
+                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+                        for i, (url, title, date) in enumerate(transcript_data):
+                            headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://nseindia.com/"}
+                            
+                            try:
+                                response = requests.get(url, headers=headers, stream=True, timeout=15)
+                                if response.status_code == 200:
+                                    pdf_filename = f"transcript_{i+1}.pdf"
+                                    zipf.writestr(pdf_filename, response.content)
+                                else:
+                                    st.warning(f"⚠️ Failed to download: {url}")
+                            except Exception as e:
+                                st.warning(f"⚠️ Error downloading {url}: {str(e)}")
                     
-                    if downloaded_files:
-                        with zipfile.ZipFile(zip_path, "w") as zipf:
-                            for file in downloaded_files:
-                                zipf.write(file, os.path.basename(file))
-                        
-                        with open(zip_path, "rb") as file:
-                            st.download_button(label="📦 Download ZIP File", data=file, file_name=zip_filename, mime="application/zip")
-                    else:
-                        st.error("❌ No PDFs were downloaded.")
+                    zip_buffer.seek(0)
+                    st.download_button(label="📦 Download ZIP File", data=zip_buffer, file_name=f"{stock_symbol.lower()}_transcripts.zip", mime="application/zip")
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
