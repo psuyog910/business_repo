@@ -134,6 +134,9 @@ def main():
             background-color: #FF6B6B;
             color: white;
         }
+        #GithubIcon {
+            visibility: hidden;
+        }
         </style>
     """, unsafe_allow_html=True)
 
