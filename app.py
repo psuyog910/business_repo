@@ -10,11 +10,12 @@ import zipfile
 import streamlit as st
 from firecrawl import FirecrawlApp
 
+# Remove these lines completely
 # Load API Key from Environment Variables
-API_KEY = os.getenv("FIRECRAWL_API_KEY", "fc-cc6afedddf66452ea64cacd5cc7dcadc")
 
-# Initialize FireCrawl API
-app = FirecrawlApp(api_key=API_KEY)
+
+# Remove this line
+# app = FirecrawlApp(api_key=API_KEY)
 
 def extract_document_links(markdown):
     """Extracts transcript, annual report, and PPT PDF links from markdown content."""
@@ -107,6 +108,9 @@ def download_pdfs(document_data, stock_symbol):
         return zip_filename
     return None
 
+# Remove the API_KEY and app initialization from here
+# Initialize FireCrawl API will be moved inside main function
+
 def main():
     # Configure the page
     st.set_page_config(
@@ -140,6 +144,21 @@ def main():
     with col2:
         st.title("Stock Document Downloader")
         st.markdown("##### Download transcripts, annual reports, and presentations for Indian stocks")
+
+    # Add API Key input section
+    api_key = st.text_input(
+        "Enter your Firecrawl API Key",
+        type="password",
+        help="Enter your Firecrawl API key. This is not stored anywhere.",
+        placeholder="fc-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    )
+
+    if not api_key:
+        st.warning("Please enter your Firecrawl API key to continue")
+        return
+
+    # Initialize FireCrawl API with user's key
+    app = FirecrawlApp(api_key=api_key)
 
     # Main content in a card-like container
     with st.container():
